@@ -54,7 +54,7 @@ function runnerAt(trips, k, t) {
 }
 
 function draw(svg, run, t, isQuench) {
-  const frame = run.frames[Math.min(run.frames.length - 1, Math.floor(t))];
+  const frame = run.frames[Math.max(0, Math.min(run.frames.length - 1, Math.floor(t)))];
   const walks = run.config.stations.map((s) => s.tripMin);
   let s = '';
   // Stage, beside the two stage stations, pushed outwards.
@@ -122,7 +122,7 @@ function show() {
   if (!runs) return;
   draw($('mapW'), runs.w, t, false);
   draw($('mapQ'), runs.q, t, true);
-  const f = Math.min(DEFAULTS.minutes - 1, Math.floor(t));
+  const f = Math.max(0, Math.min(DEFAULTS.minutes - 1, Math.floor(t)));
   $('dryW').textContent = `${runs.w.frames[f].dryMinutes} dry min`;
   $('dryQ').textContent = `${runs.q.frames[f].dryMinutes} dry min`;
   $('dryW').classList.toggle('bad', runs.w.frames[f].dryMinutes > runs.q.frames[f].dryMinutes);
@@ -161,7 +161,8 @@ function setPlaying(on) {
 }
 function tick(now) {
   if (!playing) return;
-  t += ((now - last) / PLAY_MS) * DEFAULTS.minutes;
+  // The first frame's timestamp can be a little earlier than performance.now() at Play; never go backwards.
+  t += (Math.max(0, now - last) / PLAY_MS) * DEFAULTS.minutes;
   last = now;
   if (t >= DEFAULTS.minutes - 1) {
     t = DEFAULTS.minutes - 1;
