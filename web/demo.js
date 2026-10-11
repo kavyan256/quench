@@ -174,6 +174,12 @@ function tick(now) {
 }
 
 $('play').addEventListener('click', () => setPlaying(!playing));
+// For recording the video frame by frame: jump to any (fractional) minute of the evening.
+window.quenchSimSeek = (minute) => {
+  setPlaying(false);
+  t = Math.min(DEFAULTS.minutes - 1, Math.max(0, minute));
+  show();
+};
 $('scrub').addEventListener('input', () => {
   setPlaying(false);
   t = Number($('scrub').value);

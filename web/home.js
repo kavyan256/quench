@@ -25,7 +25,10 @@ async function renderEvents() {
       const when = e.startsAt ? dayTime(e.startsAt) : '';
       const href = `event.html?e=${e.id}${e.key ? `#k=${e.key}` : ''}`;
       const viewOnly = !e.key && !e.mine;
-      return `<li><a href="${href}"><span class="art sm">${svg('station')}</span><span class="grow"><strong>${escape(e.name)}</strong><span class="small">${escape(when)}${viewOnly ? ' · view only' : ''}</span></span><span aria-hidden="true">›</span></a></li>`;
+      const now = Date.now();
+      const status = !e.startsAt || !e.endsAt ? '' : Date.parse(e.endsAt) < now ? 'Finished' : Date.parse(e.startsAt) <= now ? 'Live now' : 'Upcoming';
+      const bits = [when, status, e.sample ? 'sample' : '', viewOnly ? 'view only' : ''].filter(Boolean).join(' · ');
+      return `<li><a href="${href}"><span class="art sm">${svg('station')}</span><span class="grow"><strong>${escape(e.name)}</strong><span class="small">${escape(bits)}</span></span><span aria-hidden="true">›</span></a></li>`;
     })
     .join('');
 }

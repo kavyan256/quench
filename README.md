@@ -10,7 +10,7 @@ Built for Environmental Hacks (WeMakeDevs x AWS), Waste and Energy track, 8-11 O
 
 **Live:** https://quench.kavyan.dev (AWS, ap-south-1 Mumbai; also https://d3116g1xm6u7mg.cloudfront.net)
 
-**Tests:** 72 unit · 45 integration (API against DynamoDB Local) · 32 browser scenarios with 117 assertions (headless Chrome), run locally and against the deployed AWS site (31 there; one needs a local server) · load test: 500 taps in 30 s on AWS, 0 lost. How to run them: [Tests](#tests).
+**Tests:** 72 unit · 46 integration (API against DynamoDB Local) · 32 browser scenarios with 117 assertions (headless Chrome), run locally and against the deployed AWS site (31 there; one needs a local server) · load test: 500 taps in 30 s on AWS, 0 lost. How to run them: [Tests](#tests).
 
 ## Screenshots
 | Set up: the water plan | Volunteer: one step at a time | Runner: a job |
@@ -101,7 +101,7 @@ All Lambdas run Node.js 22 on arm64 (Graviton: cheaper per millisecond than x86)
    - **Set up**: a checklist that ticks itself: stations (rename, mark busy spots), order (share with supplier on WhatsApp), links (print QR sheet or share on WhatsApp), stock check (fills in as volunteers count).
    - **Live**: problems first; OK stations fold away.
    - **Summary**: water served, bottles avoided, runner times.
-3. **Accounts only where data is stored.** Anyone can plan, run the simulation and view event links without an account. **Creating (storing) an event needs a free account** (Amazon Cognito: email + password, email code). Judges can use the demo account **judge@quench.kavyan.dev / QuenchJudge2026** ("Fill in the demo account" on the sign-in screen): it runs at most 5 events at once, and its events are deleted after a day. Signed in, "My events" and editing work from any device. Creating an event also gives a private organiser link (`…#k=<key>`). The key sits after `#`, so it is never sent in the URL; the page sends it in a header and the server stores only its hash. The link is saved in "My events" on that device; "Send to myself" shares it to another device. Without it, the hub is view only.
+3. **Accounts only where data is stored.** Anyone can plan, run the simulation and view event links without an account. **Creating (storing) an event needs a free account** (Amazon Cognito: email + password, email code). Judges can use the demo account **judge@quench.kavyan.dev / QuenchJudge2026** ("Fill in the demo account" on the sign-in screen): it runs at most 5 events at once, and its events are deleted after a day. It also holds two read-only sample events, so there is something to look at straight away: **Spring Fest 2026** (finished, with a full summary: 2,320 L served, 16 runner jobs) and **City Half Marathon** (upcoming, set-up half done). They come from `scripts/seed-sample-events.mjs`, don't count towards the limit, and can't be edited. Signed in, "My events" and editing work from any device. Creating an event also gives a private organiser link (`…#k=<key>`). The key sits after `#`, so it is never sent in the URL; the page sends it in a header and the server stores only its hash. The link is saved in "My events" on that device; "Send to myself" shares it to another device. Without it, the hub is view only.
 4. **First time on a device:** four short welcome slides on the home page, a 4-step tour of the hub for the organiser, and a 3-line card for volunteers and runners. Each shows once; "Show the intro again" / "Show me around" replay them. Add `?intro=off` to the home, set-up or hub address to switch off the slides, the tour and the runner card on that device (for recordings).
 5. **Volunteers and runners** open their own link or QR code. Add to home screen for an app-like icon (web app manifest).
 
@@ -144,7 +144,7 @@ The site and the API share one CloudFront address: the site from S3, and `/api/*
 ## Tests
 ```bash
 npm test             # unit (72): plan maths, projection, dispatch, validation, key hashing
-npm run test:int     # integration (45): API handler against DynamoDB Local
+npm run test:int     # integration (46): API handler against DynamoDB Local
 npm run test:e2e     # browser (32 scenarios, 117 assertions): plan, PIN, QR, taps, offline, Hindi, board, stock, dispatch, summary (needs api + serve running)
 node scripts/load-test.mjs https://<site>/api 500 30   # 500 taps in 30 s, checks none are lost
 # against the deployed site:

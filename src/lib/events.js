@@ -78,7 +78,7 @@ export async function createEvent(input, user) {
 // Events of this owner that haven't ended yet (the owner index is small: one item per event).
 async function activeEventCount(sub, now = Date.now()) {
   const res = await db.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :p', ExpressionAttributeValues: { ':p': `OWNER#${sub}` } }));
-  return res.Items.filter((x) => Date.parse(x.endsAt) > now).length;
+  return res.Items.filter((x) => !x.showcase && Date.parse(x.endsAt) > now).length; // sample events don't count
 }
 
 // "My events": every event this account owns, newest first. The organiser key is never stored, so it isn't here;
@@ -86,7 +86,7 @@ async function activeEventCount(sub, now = Date.now()) {
 export async function myEvents(user) {
   if (!user) throw new HttpError(401, 'Sign in to see your events.');
   const res = await db.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :p', ExpressionAttributeValues: { ':p': `OWNER#${user.sub}` }, ScanIndexForward: false }));
-  return { events: res.Items.map(({ id, name, startsAt, endsAt }) => ({ id, name, startsAt, endsAt })) };
+  return { events: res.Items.map(({ id, name, startsAt, endsAt, showcase }) => ({ id, name, startsAt, endsAt, ...(showcase ? { sample: true } : {}) })) };
 }
 
 // Public view: no PIN or key hash, and no link tokens unless withTokens (the organiser, who prints the QR codes).
@@ -130,6 +130,8 @@ async function requirePin(id, auth = {}) {
   const owner = Boolean(auth.user && res.Item.ownerSub && auth.user.sub === res.Item.ownerSub);
   const ok = owner || (auth.key && res.Item.keyHash && verifyPin(auth.key, res.Item.keyHash)) || (auth.pin && res.Item.pinHash && verifyPin(auth.pin, res.Item.pinHash));
   if (!ok) throw new HttpError(403, auth.key ? 'This organiser link is not valid for this event.' : auth.user ? 'This event belongs to another account.' : 'Wrong organiser PIN.');
+  // Sample events in the judges' demo account (scripts/seed-sample-events.mjs) are read-only for everyone.
+  if (res.Item.showcase) throw new HttpError(403, "This is a sample event, so it can't be changed. Create your own event to try everything.");
   return res.Item;
 }
 

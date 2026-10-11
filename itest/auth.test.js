@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { handler } from '../src/api/handler.js';
 import { db, TABLE } from '../src/lib/db.js';
 import { organiserToken } from './link.js';
@@ -76,4 +76,28 @@ test('guardrails: the demo account runs at most 5 events, and they vanish after 
   const items = (await db.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :p', ExpressionAttributeValues: { ':p': `EVT#${ids[0]}` } }))).Items;
   const inADay = Math.floor(Date.now() / 1000) + 24 * 3600;
   for (const it of items) assert.ok(Math.abs(it.expiresAt - inADay) < 60, `${it.SK} expires a day after creation`);
+});
+
+test('sample events (judges\' demo account) are read-only, marked, and not counted towards the limit', async () => {
+  const email = uniq('sample');
+  const owner = organiserToken(email);
+  const { data } = await call('POST', '/events', eventBody('Sample Fest'), as(owner));
+  const mine = await call('GET', '/me/events', undefined, as(owner));
+  const sub = JSON.parse(Buffer.from(owner.split('.')[1], 'base64url').toString()).sub;
+  const ownerItem = (await db.send(new QueryCommand({ TableName: TABLE, KeyConditionExpression: 'PK = :p', ExpressionAttributeValues: { ':p': `OWNER#${sub}` } }))).Items[0];
+  // As scripts/seed-sample-events.mjs marks them.
+  await db.send(new UpdateCommand({ TableName: TABLE, Key: { PK: `EVT#${data.id}`, SK: 'META' }, UpdateExpression: 'SET showcase = :t', ExpressionAttributeValues: { ':t': true } }));
+  await db.send(new UpdateCommand({ TableName: TABLE, Key: { PK: ownerItem.PK, SK: ownerItem.SK }, UpdateExpression: 'SET showcase = :t', ExpressionAttributeValues: { ':t': true } }));
+  assert.equal(mine.data.events.length, 1);
+
+  const refused = await call('PATCH', `/events/${data.id}`, { runnerTripMin: 7 }, as(owner));
+  assert.equal(refused.status, 403);
+  assert.match(refused.data.error, /sample event/);
+  const view = await call('GET', `/events/${data.id}`, undefined, as(owner));
+  assert.equal(view.data.canEdit, false, 'the owner sees it view-only, without link tokens');
+  assert.equal(view.data.stations[0].token, undefined);
+  assert.equal((await call('GET', '/me/events', undefined, as(owner))).data.events[0].sample, true);
+  // The sample does not use up one of the account's event slots: 20 more still fit.
+  for (let i = 0; i < 20; i++) assert.equal((await call('POST', '/events', eventBody(`Own ${i}`), as(owner))).status, 201);
+  assert.equal((await call('POST', '/events', eventBody('One too many'), as(owner))).status, 429);
 });

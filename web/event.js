@@ -147,6 +147,10 @@ function renderLive() {
 async function load() {
   data = await api('GET', `/events/${eventId}`, { key });
   if (data.canEdit && !canEdit) applyEditMode(true);
+  if (data.event.showcase) {
+    $('viewOnly').textContent = 'Sample event: look around as much as you like, but it can’t be changed. Create your own event to try everything.';
+    $('viewOnly').hidden = false;
+  }
   lastOk = Date.now();
   rememberEvent({ id: eventId, name: data.event.name, startsAt: data.event.startsAt, key });
   renderHeader();
